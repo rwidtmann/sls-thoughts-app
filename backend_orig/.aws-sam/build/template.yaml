@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for thoughts-app
+Globals:
+  Function:
+    Timeout: 3
+Resources:
+  ThoughtsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: username
+        AttributeType: S
+      - AttributeName: createdAt
+        AttributeType: N
+      KeySchema:
+      - AttributeName: username
+        KeyType: HASH
+      - AttributeName: createdAt
+        KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+  getAllThoughtsFunction:
+    DependsOn: ThoughtsTable
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/get-all-thoughts.getAllThoughtsHandler
+      Runtime: nodejs14.x
+      Events:
+        ThoughtsApi:
+          Type: Api
+          Properties:
+            Path: /api/users
+            Method: get
+      CodeUri: getAllThoughtsFunction
+    Policies:
+    - DynamoDBCrudPolicy: null
+      TableName:
+        Ref: ThoughtsTable
+    Environment:
+      Variables:
+        TABLE_NAME:
+          Ref: ThoughtsTable
+  getByUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/get-by-user.getByUserHandler
+      Runtime: nodejs14.x
+      Events:
+        ThoughtsApi:
+          Type: Api
+          Properties:
+            Path: /api/users/{username}
+            Method: GET
+      CodeUri: getByUserFunction
+    Policies:
+    - DynamoDBCrudPolicy: null
+      TableName:
+        Ref: ThoughtsTable
+    Environment:
+      Variables:
+        TABLE_NAME:
+          Ref: ThoughtsTable
+  putThoughtFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/put-thought.putThoughtHandler
+      Runtime: nodejs14.x
+      Events:
+        ThoughtsApi:
+          Type: Api
+          Properties:
+            Path: /api/users
+            Method: POST
+      CodeUri: putThoughtFunction
+    Policies:
+    - DynamoDBCrudPolicy: null
+      TableName:
+        Ref: ThoughtsTable
+    Environment:
+      Variables:
+        TABLE_NAME:
+          Ref: ThoughtsTable
+Outputs:
+  ThoughtsApi:
+    Description: API Gateway endpoint URL for Prod stage for Deep Thoughts application
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/api/users
+  ThoughtsTable:
+    Description: DynamoDB table
+    Value:
+      Fn::GetAtt:
+      - ThoughtsTable
+      - Arn
